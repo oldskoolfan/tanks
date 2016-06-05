@@ -24,14 +24,14 @@
     </main>
     <script>
         // key codes
-        let UP = 38;
-        let DOWN = 40;
-        let LEFT = 37;
-        let RIGHT = 39;
-        let SPACE = 32;
+        var UP = 38;
+        var DOWN = 40;
+        var LEFT = 37;
+        var RIGHT = 39;
+        var SPACE = 32;
 
         // game object
-        let game = {
+        var game = {
             canvas: document.createElement('canvas'),
             start: function() {
                 this.canvas.width = 640;
@@ -81,36 +81,43 @@
 
         // shot class
         function Shot() {
+			var coords = game.tank.getCoordinates(),
+				gunLeft = game.tank.getRotatedCoordinate(coords.gunLeft);
+
+			this.angle = game.tank.angle;
             this.deltaX = 0;
             this.deltaY = 0;
+			this.x = gunLeft[0] + 4;
+			this.y = gunLeft[1] - 4;
             this.update = function() {
-                var hitHorizBoundary = false,
-                    hitVertBoundary = false;
                 this.deltaX += 1;
                 this.deltaY += 1;
-                if (this.deltaX <= 0 || this.deltaX >= game.canvas.width) {
-                    hitHorizBoundary = true;
-                }
-                if (this.deltaY <= 0 || this.deltaY >= game.canvas.height) {
-                    hitVertBoundary = true;
-                }
-                if (hitHorizBoundary | hitVertBoundary) return delete this;
                 this.draw();
             };
             this.draw = function() {
-                let context = game.context,
-                    coords = game.tank.getCoordinates(),
-                    gunLeft = game.tank.getRotatedCoordinate(coords.gunLeft),
-                    originX = gunLeft[0] + 2,
-                    originY = gunLeft[1],
-                    xPos = this.deltaX * Math.sin(game.tank.angle),
-                    yPos = this.deltaY * Math.cos(game.tank.angle);
+                var context = game.context;
+                this.x += this.deltaX * Math.sin(this.angle),
+                this.y -= this.deltaY * Math.cos(this.angle);
+
+				var hitHorizBoundary = false,
+					hitVertBoundary = false;
+				if (this.x <= 0 || this.x >= game.canvas.width) {
+                    hitHorizBoundary = true;
+                }
+                if (this.y <= 0 || this.y >= game.canvas.height) {
+                    hitVertBoundary = true;
+                }
+                if (hitHorizBoundary | hitVertBoundary) return delete this;
+
+				console.log(game.tank.shot.x + ', ' + game.tank.shot.y);
+				console.log('gunLeft: ' + gunLeft);
+
                 context.save();
-                context.translate(originX, originY);
-                context.rotate(game.tank.angle);
+                context.translate(this.x, this.y);
+                context.rotate(this.angle);
                 context.fillStyle = 'black';
                 context.strokeStyle = 'black';
-                context.fillRect(xPos, yPos, 4, 4);
+                context.fillRect(0, 0, 4, 4);
                 context.restore();
             };
         }
@@ -175,11 +182,13 @@
                     a = this.angle,
                     x = coord[0],
                     y = coord[1];
+
+				// this math hurts my head... X_X
                 return [(x - xm) * Math.cos(a) - (y - ym) * Math.sin(a) + xm,
                     (y - ym) * Math.cos(a) - (x - xm) * Math.sin(a) + ym];
             };
             this.update = function() {
-                let oldX = this.x,
+                var oldX = this.x,
                     oldY = this.y,
                     oldAngle = this.angle;
                 var hitHorizBoundary = false,
@@ -188,7 +197,7 @@
                 this.angle += deltaAngle;
                 this.x += this.speed * Math.sin(this.angle);
                 this.y -= this.speed * Math.cos(this.angle);
-                let coords = this.getCoordinates();
+                var coords = this.getCoordinates();
                 for (var key in coords) {
                     var coord = this.getRotatedCoordinate(coords[key]);
                     if (coord[0] <= 0 || coord[0] >= game.canvas.width) {
@@ -207,7 +216,7 @@
                 this.draw();
             };
             this.draw = function() {
-                let context = game.context,
+                var context = game.context,
                     originX = -(this.width / 2),
                     originY = -(this.height / 2),
                     newWidth = this.width + originX,
