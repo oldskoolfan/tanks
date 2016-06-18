@@ -1,253 +1,306 @@
 <!doctype html>
+<html>
 <head>
-    <title>Tanks!</title>
-    <meta charset="utf-8">
-    <style>
-        body {
-            font-family: Arial;
-        }
-        h1 {
-            text-align: center;
-        }
-        canvas {
-            background-color: #f1f1f1;
-        }
-        main {
-            width: 640px;
-            margin: 0 auto;
-        }
-    </style>
+	<title>Tanks!</title>
+	<meta charset="utf-8">
+	<style>
+		body {
+			margin: 0;
+			font-family: Arial;
+		}
+
+		h1 {
+			text-align: center;
+		}
+
+		canvas {
+			background-color: #f1f1f1;
+		}
+
+		main {
+			width: 640px;
+			margin: 0 auto;
+		}
+	</style>
 </head>
+
 <body>
-    <main>
-        <h1>Tanks!</h1>
-    </main>
-    <script>
-        // key codes
-        var UP = 38;
-        var DOWN = 40;
-        var LEFT = 37;
-        var RIGHT = 39;
-        var SPACE = 32;
+	<main>
+		<h1>Tanks!</h1>
+	</main>
+	<script>
+		// key codes
+		var UP = 38;
+		var DOWN = 40;
+		var LEFT = 37;
+		var RIGHT = 39;
+		var SPACE = 32;
 
-        // game object
-        var game = {
-            canvas: document.createElement('canvas'),
-            start: function() {
-                this.canvas.width = 640;
-                this.canvas.height = 480;
-                this.pause = false;
-                this.frameNumber = 0;
-                this.context = this.canvas.getContext('2d');
-                this.interval = setInterval(this.update, 20);
+		// game object
+		var game = {
+			canvas: document.createElement('canvas'),
+			start: function() {
+				this.canvas.width = 640;
+				this.canvas.height = 480;
+				this.pause = false;
+				this.frameNumber = 0;
+				this.context = this.canvas.getContext('2d');
+				this.interval = setInterval(this.update, 20);
+				this.tanks = [];
 
-                // insert canvas
-                var main = document.getElementsByTagName('main')[0];
-                main.appendChild(this.canvas);
+				// insert canvas
+				var main = document.getElementsByTagName('main')[0];
+				main.appendChild(this.canvas);
 
-                // add event listeners
-                window.addEventListener('keydown', function(e) {
-                    game.keys = game.keys || [];
-                    game.keys[e.keyCode] = true;
-                });
-                window.addEventListener('keyup', function(e) {
-                    game.keys = game.keys || [];
-                    game.keys[e.keyCode] = false;
-                });
+				// add event listeners
+				window.addEventListener('keydown', function(e) {
+					game.keys = game.keys || [];
+					game.keys[e.keyCode] = true;
+				});
+				window.addEventListener('keyup', function(e) {
+					game.keys = game.keys || [];
+					game.keys[e.keyCode] = false;
+				});
 
-                // create tank
-                this.tank = new Tank(30, 30, 5, 20, 'green', 30, this.canvas.height - 50);
-                this.tank.update();
-            },
-            clear: function() {
-                this.context.clearRect(0, 0, this.canvas.width,
-                    this.canvas.height);
-            },
-            update: function() { // main game loop
-                game.clear();
-                game.tank.speed = 0;
-                game.tank.moveAngle = 0;
-                if (game.keys) {
-                    if (game.keys[LEFT]) game.tank.moveAngle -= 1;
-                    if (game.keys[RIGHT]) game.tank.moveAngle += 1;
-                    if (game.keys[DOWN]) game.tank.speed -= 1;
-                    if (game.keys[UP]) game.tank.speed += 1;
-                    if (game.keys[SPACE]) game.tank.shoot();
-                }
-                game.tank.update();
-                if (game.tank.shot != null) game.tank.shot.update();
-            }
-        }
+				// create tank
+				this.tanks.push(new Tank(30, 30, 5, 20, 'green', 30, this.canvas.height - 50, true));
+				this.tanks.push(new Tank(30, 30, 5, 20, 'blue', 30, 50, false));
+				this.tanks.forEach(function(tank) {
+					tank.update();
+				});
+			},
+			clear: function() {
+				this.context.clearRect(0, 0, this.canvas.width,
+					this.canvas.height);
+			},
+			update: function() { // main game loop
+				game.clear();
+				game.tanks.forEach(function(tank) {
+					tank.speed = 0;
+					tank.moveAngle = 0;
+					if (game.keys && tank.isPlayerTank) {
+						if (game.keys[LEFT]) tank.moveAngle -= 1;
+						if (game.keys[RIGHT]) tank.moveAngle += 1;
+						if (game.keys[DOWN]) tank.speed -= 1;
+						if (game.keys[UP]) tank.speed += 1;
+						if (game.keys[SPACE]) tank.shoot();
+					}
+					tank.update();
+					if (tank.shot != null) tank.shot.update();
+				});
+			}
+		}
 
-        // shot class
-        function Shot() {
-			var coords = game.tank.getCoordinates(),
-				gunLeft = game.tank.getRotatedCoordinate(coords.gunLeft);
+		// shot class
+		function Shot(tank) {
+			var coords = tank.getCoordinates(),
+				gunLeft = tank.getRotatedCoordinate(coords.gunLeft),
+				gunRight = tank.getRotatedCoordinate(coords.gunRight),
+				thisTank = tank;
 
-			this.angle = game.tank.angle;
-            this.deltaX = 0;
-            this.deltaY = 0;
-			this.x = gunLeft[0] + 4;
-			this.y = gunLeft[1] - 4;
-            this.update = function() {
-                this.deltaX += 1;
-                this.deltaY += 1;
-                this.draw();
-            };
-            this.draw = function() {
-                var context = game.context;
-                this.x += this.deltaX * Math.sin(this.angle),
-                this.y -= this.deltaY * Math.cos(this.angle);
+			this.angle = tank.angle;
+			this.deltaX = 0;
+			this.deltaY = 0;
+			this.x = Math.abs((gunLeft[0] + gunRight[0]) / 2);
+			this.y = Math.abs((gunLeft[1] + gunRight[1]) / 2);
+			this.update = function() {
+				this.deltaX += 1;
+				this.deltaY += 1;
+				this.draw();
+			};
+			this.draw = function() {
+				var context = game.context;
+				this.x += this.deltaX * Math.sin(this.angle);
+				this.y -= this.deltaY * Math.cos(this.angle);
 
 				var hitHorizBoundary = false,
-					hitVertBoundary = false;
+					hitVertBoundary = false,
+					hitTank;
 				if (this.x <= 0 || this.x >= game.canvas.width) {
-                    hitHorizBoundary = true;
-                }
-                if (this.y <= 0 || this.y >= game.canvas.height) {
-                    hitVertBoundary = true;
-                }
-                if (hitHorizBoundary | hitVertBoundary) return delete this;
+					hitHorizBoundary = true;
+				}
+				if (this.y <= 0 || this.y >= game.canvas.height) {
+					hitVertBoundary = true;
+				}
 
-				console.log(game.tank.shot.x + ', ' + game.tank.shot.y);
+				// check if we hit any tanks; if so, delete tank and shot
+				for (var i = 0; i < game.tanks.length; i++) {
+					var tank = game.tanks[i],
+						coords = tank.getCoordinates(),
+						minX, maxX, minY, maxY;
+					for (var key in coords) {
+						var coord = tank.getRotatedCoordinate(coords[key]);
+						if (key === 'bottomLeft') {
+							minX = coord[0];
+						}
+						if (key === 'topLeft') {
+							minY = coord[1];
+						}
+						if (key === 'topRight') {
+							maxX = coord[0];
+						}
+						if (key === 'bottomRight') {
+							maxY = coord[1];
+						}
+					}
+					console.log ('minX:' + minX + ',maxX:' + maxX + ',minY:' + minY + ',maxY:' + maxY
+						+ 'shotX:' + this.x + ',shotY:' + this.y);
+					if ((minX <= this.x && this.x <= maxX)  && (minY <= this.y && this.y <= maxY)) {
+						console.log('******hit!!!!*******');
+						thisTank.shot = null;
+						return delete game.tanks[i];
+					}
+				}
+
+				// delete shot if we hit our boundaries
+				if (hitHorizBoundary | hitVertBoundary) {
+					thisTank.shot = null;
+					return;
+				}
+				console.log(this.x + ', ' + this.y);
 				console.log('gunLeft: ' + gunLeft);
 
-                context.save();
-                context.translate(this.x, this.y);
-                context.rotate(this.angle);
-                context.fillStyle = 'black';
-                context.strokeStyle = 'black';
-                context.fillRect(0, 0, 4, 4);
-                context.restore();
-            };
-        }
+				// draw the shot
+				context.save();
+				context.translate(this.x, this.y);
+				context.rotate(this.angle);
+				context.fillStyle = 'black';
+				context.strokeStyle = 'black';
+				context.fillRect(0, 0, 4, 4);
+				context.restore();
+			};
+		}
 
-        // tank class
-        function Tank(w, h, gunWidth, gunLength, color, x, y) {
-            this.width = w;
-            this.height = h;
-            this.gunWidth = gunWidth;
-            this.gunLength = gunLength;
-            this.gunsideLength = (h - gunWidth) / 2;
-            this.speed = 0;
-            this.angle = 0;
-            this.moveAngle = 0;
-            this.color = color;
-            this.x = x;
-            this.y = y;
-            this.deltaX = 0;
-            this.shotFired = false;
-            this.shot = null;
+		// tank class
+		function Tank(w, h, gunWidth, gunLength, color, x, y, isPlayerTank) {
+			this.isPlayerTank = isPlayerTank;
+			this.width = w;
+			this.height = h;
+			this.gunWidth = gunWidth;
+			this.gunLength = gunLength;
+			this.gunsideLength = (h - gunWidth) / 2;
+			this.speed = 0;
+			this.angle = 0;
+			this.moveAngle = 0;
+			this.color = color;
+			this.x = x;
+			this.y = y;
+			this.deltaX = 0;
+			this.shotFired = false;
+			this.shot = null;
 
-            // animating functions
-            this.shoot = function() {
-                if (!this.shotFired) {
-                    this.shotFired = true;
-                    var tank = this;
-                    tank.shot = new Shot();
-                    setTimeout(function() { tank.shotFired = false }, 500);
-                }
-            }
-            this.getCoordinates = function() {
-                return {
-                    topLeft: [
-                        this.x - this.width / 2,
-                        this.y - this.height / 2
-                    ],
-                    topRight: [
-                        this.x + this.width / 2,
-                        this.y - this.height / 2
-                    ],
-                    bottomLeft: [
-                        this.x - this.width / 2,
-                        this.y + this.height / 2
-                    ],
-                    bottomRight: [
-                        this.x + this.width / 2,
-                        this.y + this.height / 2
-                    ],
-                    gunLeft: [
-                        this.x - this.width / 2 + this.gunsideLength,
-                        this.y - this.height / 2 - this.gunLength
-                    ],
-                    gunRight: [
-                        this.x - this.width / 2 + this.gunsideLength + this.gunWidth,
-                        this.y - this.height / 2 - this.gunLength
-                    ]
-                };
-            };
-            this.getRotatedCoordinate = function(coord) {
-                var xm = this.x,
-                    ym = this.y,
-                    a = this.angle,
-                    x = coord[0],
-                    y = coord[1];
+			// animating functions
+			this.shoot = function() {
+				if (!this.shotFired) {
+					this.shotFired = true;
+					var tank = this;
+					tank.shot = new Shot(tank);
+					setTimeout(function() {
+						tank.shotFired = false
+					}, 500);
+				}
+			}
+			this.getCoordinates = function() {
+				return {
+					topLeft: [
+						this.x - this.width / 2,
+						this.y - this.height / 2
+					],
+					topRight: [
+						this.x + this.width / 2,
+						this.y - this.height / 2
+					],
+					bottomLeft: [
+						this.x - this.width / 2,
+						this.y + this.height / 2
+					],
+					bottomRight: [
+						this.x + this.width / 2,
+						this.y + this.height / 2
+					],
+					gunLeft: [
+						this.x - this.width / 2 + this.gunsideLength,
+						this.y - this.height / 2 - this.gunLength
+					],
+					gunRight: [
+						this.x - this.width / 2 + this.gunsideLength + this.gunWidth,
+						this.y - this.height / 2 - this.gunLength
+					]
+				};
+			};
+			this.getRotatedCoordinate = function(coord) {
+				var xm = this.x,
+					ym = this.y,
+					a = this.angle,
+					x = coord[0],
+					y = coord[1];
 
 				// this math hurts my head... X_X
-                return [(x - xm) * Math.cos(a) - (y - ym) * Math.sin(a) + xm,
-                    (y - ym) * Math.cos(a) - (x - xm) * Math.sin(a) + ym];
-            };
-            this.update = function() {
-                var oldX = this.x,
-                    oldY = this.y,
-                    oldAngle = this.angle;
-                var hitHorizBoundary = false,
-                    hitVertBoundary = false,
-                    deltaAngle = this.moveAngle * Math.PI / 180;
-                this.angle += deltaAngle;
-                this.x += this.speed * Math.sin(this.angle);
-                this.y -= this.speed * Math.cos(this.angle);
-                var coords = this.getCoordinates();
-                for (var key in coords) {
-                    var coord = this.getRotatedCoordinate(coords[key]);
-                    if (coord[0] <= 0 || coord[0] >= game.canvas.width) {
-                        hitHorizBoundary = true;
-                        this.x = oldX;
-                    }
-                    if (coord[1] <= 0 || coord[1] >= game.canvas.height) {
-                        hitVertBoundary = true;
-                        this.y = oldY;
-                    }
-                    if (hitHorizBoundary || hitVertBoundary) {
-                        this.angle = oldAngle;
-                        break;
-                    }
-                }
-                this.draw();
-            };
-            this.draw = function() {
-                var context = game.context,
-                    originX = -(this.width / 2),
-                    originY = -(this.height / 2),
-                    newWidth = this.width + originX,
-                    newHeight = this.height + originY;
-                context.save();
-                context.translate(this.x, this.y);
-                context.rotate(this.angle);
+				return [(x - xm) * Math.cos(a) - (y - ym) * Math.sin(a) + xm,
+					(y - ym) * Math.cos(a) - (x - xm) * Math.sin(a) + ym
+				];
+			};
+			this.update = function() {
+				var oldX = this.x,
+					oldY = this.y,
+					oldAngle = this.angle;
+				var hitHorizBoundary = false,
+					hitVertBoundary = false,
+					deltaAngle = this.moveAngle * Math.PI / 180;
+				this.angle += deltaAngle;
+				this.x += this.speed * Math.sin(this.angle);
+				this.y -= this.speed * Math.cos(this.angle);
+				var coords = this.getCoordinates();
+				for (var key in coords) {
+					var coord = this.getRotatedCoordinate(coords[key]);
+					if (coord[0] <= 0 || coord[0] >= game.canvas.width) {
+						hitHorizBoundary = true;
+						this.x = oldX;
+					}
+					if (coord[1] <= 0 || coord[1] >= game.canvas.height) {
+						hitVertBoundary = true;
+						this.y = oldY;
+					}
+					if (hitHorizBoundary || hitVertBoundary) {
+						this.angle = oldAngle;
+						break;
+					}
+				}
+				this.draw();
+			};
+			this.draw = function() {
+				var context = game.context,
+					originX = -(this.width / 2),
+					originY = -(this.height / 2),
+					newWidth = this.width + originX,
+					newHeight = this.height + originY;
+				context.save();
+				context.translate(this.x, this.y);
+				context.rotate(this.angle);
 
-                context.fillStyle = this.color;
-                context.strokeStyle = this.color;
-                context.beginPath();
-                context.moveTo(originX, originY);
+				context.fillStyle = this.color;
+				context.strokeStyle = this.color;
+				context.beginPath();
+				context.moveTo(originX, originY);
 
-                // draw gun
-                context.lineTo(originX + this.gunsideLength, originY);
-                context.lineTo(originX + this.gunsideLength, originY - this.gunLength);
-                context.lineTo(originX + this.gunsideLength + this.gunWidth, originY - this.gunLength);
-                context.lineTo(originX + this.gunsideLength + this.gunWidth, originY);
+				// draw gun
+				context.lineTo(originX + this.gunsideLength, originY);
+				context.lineTo(originX + this.gunsideLength, originY - this.gunLength);
+				context.lineTo(originX + this.gunsideLength + this.gunWidth, originY - this.gunLength);
+				context.lineTo(originX + this.gunsideLength + this.gunWidth, originY);
 
-                // finish body
-                context.lineTo(newWidth, originY);
-                context.lineTo(newWidth, newHeight);
-                context.lineTo(originX, newHeight);
-                context.closePath();
-                context.stroke();
-                context.fill();
-                context.restore();
-            };
-        }
+				// finish body
+				context.lineTo(newWidth, originY);
+				context.lineTo(newWidth, newHeight);
+				context.lineTo(originX, newHeight);
+				context.closePath();
+				context.stroke();
+				context.fill();
+				context.restore();
+			};
+		}
 
-        game.start();
-    </script>
+		game.start();
+	</script>
 </body>
 </html>
